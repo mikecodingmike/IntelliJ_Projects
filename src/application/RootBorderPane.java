@@ -1,5 +1,6 @@
 package application;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -36,11 +37,11 @@ public class RootBorderPane extends BorderPane {
     private MitarbeiterDialog mitarbeiterDialog;
 
 
-    public RootBorderPane(){
+    RootBorderPane(){
 
         initComponents();
         addComponents();
-        diableComponents(true);
+        disableComponents(true);
         addHaendler();
 
     }
@@ -86,14 +87,12 @@ public class RootBorderPane extends BorderPane {
         personalbuero = new Personalbuero();
 
         mitarbeiterUebersicht = new MitarbeiterUebersicht(this);
-
-
-
     }
 
     private void addComponents(){
         setTop(menuBar);
         menuDatei.getItems().addAll(miLaden, miSpeichern, new SeparatorMenuItem(), miImportieren, miExportieren, new SeparatorMenuItem(), miBeenden);
+        menuMitarbeiter.getItems().addAll(miAendern, miLoeschenEinzeln, miLoeschenMulti);
         menuHilfe.getItems().add(miUeber);
         menuSortierenNach.getItems().addAll(miSortAlter, miSortGehalt, miSortNamen);
         menuHinzufuegen.getItems().addAll(miHinzuAngestellter, miHinzuManager, miHinzuFreelancer);
@@ -107,14 +106,28 @@ public class RootBorderPane extends BorderPane {
         setBottom(buttonPane);
     }
 
-    public void diableComponents(Boolean disabled){
+    private void disableComponents(Boolean disabled){
+        miSpeichern.setDisable(disabled);
+        miExportieren.setDisable(disabled);
+        miAendern.setDisable(disabled);
+        menuSortierenNach.setDisable(disabled);
+        miLoeschenEinzeln.setDisable(disabled);
+        miLoeschenMulti.setDisable(disabled);
 
+        mitarbeiterUebersicht.setVisible(!disabled);
+        buttonPane.setVisible(!disabled);
     }
     //Händler
 
-    public void addHaendler(){
+    private void addHaendler(){
 
         miLaden.setOnAction(event -> laden());
+        miBeenden.setOnAction(event -> beenden());
+        miUeber.setOnAction(event -> ueber());
+        miLoeschenMulti.setOnAction(event -> loeschenMultiple());
+        miLoeschenEinzeln.setOnAction(event -> loeschenEinzeln());
+        miSpeichern.setOnAction(event -> speichern());
+
     }
 
     private void laden() {
@@ -125,7 +138,7 @@ public class RootBorderPane extends BorderPane {
             fc.setInitialDirectory(initDirectory);
         }
         else{
-            Main.showAlert(Alert.AlertType.ERROR, "initDirectory not found");
+            Main.showAlert(Alert.AlertType.ERROR, "initDirectory not found",ButtonType.OK);
         }
         File selected = fc.showOpenDialog(null);
         if(selected != null){
@@ -134,15 +147,32 @@ public class RootBorderPane extends BorderPane {
                 mitarbeiterUebersicht.updateAndShow(personalbuero.getMitarbeiter());
             }
             catch(PersonalException e){
-                Main.showAlert(Alert.AlertType.ERROR,e.getMessage());
+                Main.showAlert(Alert.AlertType.ERROR,e.getMessage(),ButtonType.OK);
             }
         }
         else{
-            Main.showAlert(Alert.AlertType.ERROR, "something went wrong with the selected file");
+            Main.showAlert(Alert.AlertType.ERROR, "something went wrong with the selected file",ButtonType.OK);
         }
     }
 
-    public void aendern(){
+    private void speichern(){
+        FileChooser fc = new FileChooser();
+        fc.setInitialDirectory( new File("C:\\scratch"));
+        File selected = fc.showSaveDialog(null);
+        if(selected != null){
+            try{
+                personalbuero.saveMitarbeiter(selected.getAbsolutePath());
+            }
+            catch(PersonalException e){
+                Main.showAlert(Alert.AlertType.ERROR, e.getMessage(), ButtonType.OK);
+            }
+        }
+        else{
+            Main.showAlert(Alert.AlertType.ERROR, "No File selected", ButtonType.OK);
+        }
+    }
+
+    void aendern(){
         List<Mitarbeiter> auswahl = mitarbeiterUebersicht.getSelection();
         if(auswahl.size() > 0){
             if(auswahl.size() ==1){
@@ -151,11 +181,53 @@ public class RootBorderPane extends BorderPane {
                 mitarbeiterUebersicht.updateAndShow(personalbuero.getMitarbeiter());
 
             }
+            else{
+                Main.showAlert(Alert.AlertType.ERROR,"Only single selection can be deleted", ButtonType.OK);
+            }
+        }
+        else{
+            Main.showAlert(Alert.AlertType.ERROR, "Nothing is selevted",ButtonType.OK);
         }
     }
 
-    public void loeschenMultiple(){
+    private void ueber(){
+        Main.showAlert(Alert.AlertType.INFORMATION, "Personalbuero Version 1.0\n \n Copyright Mike Tangwena 2019", ButtonType.OK);
+    }
 
+    private void beenden(){
+        Platform.exit();
+    }
+
+    protected void loeschenMultiple(){
+        List<Mitarbeiter> multiSelect = mitarbeiterUebersicht.getSelection();
+        if(multiSelect.size() > 0){
+            try{
+                personalbuero.remove(multiSelect);
+                mitarbeiterUebersicht.updateAndShow(personalbuero.getMitarbeiter());
+            }
+            catch(PersonalException e){
+                Main.showAlert(Alert.AlertType.ERROR, e.getMessage(), ButtonType.OK);
+            }
+        }
+        else{
+            Main.showAlert(Alert.AlertType.ERROR, "Nothing is selected", ButtonType.OK);
+        }
+    }
+
+    private void loeschenEinzeln(){
+        List<Mitarbeiter> einzelSelect = mitarbeiterUebersicht.getSelection();
+        if(einzelSelect.size() == 1){
+            try{
+                personalbuero.remove(einzelSelect);
+                mitarbeiterUebersicht.updateAndShow(personalbuero.getMitarbeiter());
+            }
+            catch(PersonalException e){
+                Main.showAlert(Alert.AlertType.ERROR, e.getMessage(), ButtonType.OK);
+            }
+        }
+        else{
+            Main.showAlert(Alert.AlertType.ERROR, "Selected is not 1", ButtonType.OK);
+        }
     }
 
 }
